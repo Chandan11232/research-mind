@@ -1,0 +1,13 @@
+# Environments
+.env
+.env.local
+.env.shared-*.local
+.venv/
+myproject-env/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
