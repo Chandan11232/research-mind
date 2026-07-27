@@ -77,7 +77,7 @@ export default function Home() {
     addLog("Initialising agent...", "info");
     addLog(`query: "${query}"`, "");
     addLog(`max_iterations: ${iterations}`, "");
-    addLog("model: gemini-2.5-flash + tavily-search", "");
+    addLog("model: Llama + tavily-search", "");
     addLog("Building StateGraph...", "info");
 
     try {
@@ -163,7 +163,7 @@ export default function Home() {
       {/* Header */}
       <header>
         <div className="header-badge">
-          LangGraph Agent — Powered by Gemini + Tavily
+          LangGraph Agent — Powered by LLama + Tavily
         </div>
         <h1>ResearchMind</h1>
         <p className="subtitle">
