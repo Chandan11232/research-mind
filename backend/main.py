@@ -50,22 +50,39 @@ class ResearchResponse(BaseModel):
 def build_graph(max_iterations: int = 2):
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",  
-        temperature=0,
+        temperature=0.3,  # Slight temperature allows variation in query generation
         max_retries=2
     )
     search_tool = TavilySearch(max_results=3)
 
     def research_node(state: AgentState):
-        results = search_tool.invoke(state["query"])
+        current_query = state["query"]
+        
+        # 1. If we are past iteration 0, ask LLM to generate a deeper follow-up search query
+        if state["iteration"] > 0 and state["summaries"]:
+            previous_summary = state["summaries"][-1]
+            query_prompt = (
+                f"Original query: '{state['query']}'\n"
+                f"Current finding: '{previous_summary}'\n\n"
+                f"Formulate a NEW, different 3-5 word Google search query to find deeper technical details "
+                f"or missing angles about this topic. Output ONLY the search query string."
+            )
+            current_query = llm.invoke(query_prompt).content.strip().replace('"', '')
+
+        # 2. Search using the newly refined query
+        results = search_tool.invoke(current_query)
         raw = str(results)
+
+        # 3. Summarise findings for this pass
         summary_prompt = (
-            f"You are a research assistant. Based on these search results:\n\n{raw}\n\n"
-            f"Write a concise 3-5 sentence research finding about: '{state['query']}'. "
-            f"Include specific facts, numbers, or examples where available."
+            f"You are a research assistant (Pass {state['iteration'] + 1}). "
+            f"Based on these search results for query '{current_query}':\n\n{raw}\n\n"
+            f"Write a concise 3-5 sentence research finding focusing on NEW details about '{state['query']}'."
         )
         summary = llm.invoke(summary_prompt).content
+
         return {
-            "reports": [raw],
+            "reports": [f"[{current_query}]: {raw}"],
             "summaries": [summary],
             "iteration": state["iteration"] + 1,
         }
