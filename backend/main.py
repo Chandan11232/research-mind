@@ -48,9 +48,10 @@ class ResearchResponse(BaseModel):
 
 
 def build_graph(max_iterations: int = 2):
+    # Set temperature slightly higher so query generation varies
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",  
-        temperature=0.3,  # Slight temperature allows variation in query generation
+        temperature=0.3,
         max_retries=2
     )
     search_tool = TavilySearch(max_results=3)
@@ -58,31 +59,37 @@ def build_graph(max_iterations: int = 2):
     def research_node(state: AgentState):
         current_query = state["query"]
         
-        # 1. If we are past iteration 0, ask LLM to generate a deeper follow-up search query
+        # 1. If past pass 0, generate a NEW follow-up search query based on previous summaries
         if state["iteration"] > 0 and state["summaries"]:
-            previous_summary = state["summaries"][-1]
+            previous_findings = "\n".join(state["summaries"])
             query_prompt = (
-                f"Original query: '{state['query']}'\n"
-                f"Current finding: '{previous_summary}'\n\n"
-                f"Formulate a NEW, different 3-5 word Google search query to find deeper technical details "
-                f"or missing angles about this topic. Output ONLY the search query string."
+                f"Original User Topic: '{state['query']}'\n\n"
+                f"Findings already discovered:\n{previous_findings}\n\n"
+                f"Generate a NEW, specific 3-5 word Google search query to find deeper technical details, "
+                f"architecture components, or missing perspectives on this topic. "
+                f"Do NOT search for general definitions. Output ONLY the search query string."
             )
             current_query = llm.invoke(query_prompt).content.strip().replace('"', '')
 
-        # 2. Search using the newly refined query
+        # 2. Search using the newly dynamically generated query
         results = search_tool.invoke(current_query)
         raw = str(results)
 
-        # 3. Summarise findings for this pass
+        # 3. Summarize focusing strictly on NEW details
+        existing_summaries = "\n".join(state["summaries"]) if state["summaries"] else "None yet."
         summary_prompt = (
-            f"You are a research assistant (Pass {state['iteration'] + 1}). "
-            f"Based on these search results for query '{current_query}':\n\n{raw}\n\n"
-            f"Write a concise 3-5 sentence research finding focusing on NEW details about '{state['query']}'."
+            f"You are a research assistant on pass {state['iteration'] + 1}.\n"
+            f"Original Query: '{state['query']}'\n"
+            f"Current Sub-Search: '{current_query}'\n\n"
+            f"Search Results:\n{raw}\n\n"
+            f"Already documented findings:\n{existing_summaries}\n\n"
+            f"Write 3-5 concise sentences explaining NEW technical details or mechanisms from the search results "
+            f"that have NOT been mentioned in the documented findings above."
         )
         summary = llm.invoke(summary_prompt).content
 
         return {
-            "reports": [f"[{current_query}]: {raw}"],
+            "reports": [f"Query: [{current_query}]\nResults: {raw}"],
             "summaries": [summary],
             "iteration": state["iteration"] + 1,
         }
