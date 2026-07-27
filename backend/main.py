@@ -48,7 +48,6 @@ class ResearchResponse(BaseModel):
 
 
 def build_graph(max_iterations: int = 2):
-    # Set temperature slightly higher so query generation varies
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",  
         temperature=0.3,
@@ -59,7 +58,6 @@ def build_graph(max_iterations: int = 2):
     def research_node(state: AgentState):
         current_query = state["query"]
         
-        # 1. If past pass 0, generate a NEW follow-up search query based on previous summaries
         if state["iteration"] > 0 and state["summaries"]:
             previous_findings = "\n".join(state["summaries"])
             query_prompt = (
@@ -71,11 +69,9 @@ def build_graph(max_iterations: int = 2):
             )
             current_query = llm.invoke(query_prompt).content.strip().replace('"', '')
 
-        # 2. Search using the newly dynamically generated query
         results = search_tool.invoke(current_query)
         raw = str(results)
 
-        # 3. Summarize focusing strictly on NEW details
         existing_summaries = "\n".join(state["summaries"]) if state["summaries"] else "None yet."
         summary_prompt = (
             f"You are a research assistant on pass {state['iteration'] + 1}.\n"
