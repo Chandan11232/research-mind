@@ -3,13 +3,14 @@ import json
 import operator
 import os
 from typing import Annotated, List, TypedDict
+import time
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_tavily import TavilySearch
+from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel
 
@@ -46,14 +47,16 @@ class ResearchResponse(BaseModel):
     iterations: int
 
 
-# ── Build the graph factory (so we can parameterise max_iterations) ────────────
 def build_graph(max_iterations: int = 2):
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
-    search_tool = TavilySearchResults(max_results=3)
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",  
+        temperature=0,
+        max_retries=2
+    )
+    search_tool = TavilySearch(max_results=3)
 
     def research_node(state: AgentState):
         results = search_tool.invoke(state["query"])
-        # Summarise with the LLM
         raw = str(results)
         summary_prompt = (
             f"You are a research assistant. Based on these search results:\n\n{raw}\n\n"

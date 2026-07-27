@@ -1,13 +1,12 @@
-# Environments
+# Environment files
 .env
 .env.local
-.env.shared-*.local
-.venv/
-myproject-env/
-venv/
-env/
+.env.*.local
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Virtual environment
+.venv/
+venv/
+
+# Node modules
+node_modules/
+.next/
