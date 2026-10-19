@@ -2,8 +2,7 @@ fastapi
 uvicorn[standard]
 langgraph
 langchain
-langchain-google-genai
-langchain-community
+langchain-groq
 tavily-python
 python-dotenv
 pydantic>=2.7.4

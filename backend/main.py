@@ -9,10 +9,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from langchain_tavily import TavilySearch
 from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel
+from tavily import TavilyClient
 
 app = FastAPI(title="LangGraph Research Agent API")
 load_dotenv()
@@ -49,11 +49,15 @@ class ResearchResponse(BaseModel):
 
 def build_graph(max_iterations: int = 2):
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",  
+        model="openai/gpt-oss-120b",
         temperature=0.3,
         max_retries=2
     )
-    search_tool = TavilySearch(max_results=3)
+    tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+
+    def search(query: str):
+        response = tavily.search(query, max_results=3)
+        return [{"url": r["url"], "content": r["content"]} for r in response["results"]]
 
     def research_node(state: AgentState):
         current_query = state["query"]
@@ -69,7 +73,7 @@ def build_graph(max_iterations: int = 2):
             )
             current_query = llm.invoke(query_prompt).content.strip().replace('"', '')
 
-        results = search_tool.invoke(current_query)
+        results = search(current_query)
         raw = str(results)
 
         existing_summaries = "\n".join(state["summaries"]) if state["summaries"] else "None yet."
