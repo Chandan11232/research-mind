@@ -3,13 +3,16 @@ services:
     build: ./backend
     env_file: .env
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
   frontend:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_BASE: http://localhost:8000
+        # Set NEXT_PUBLIC_API_BASE in .env (e.g. https://research-mind.duckdns.org)
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8000}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - backend
+    restart: unless-stopped
